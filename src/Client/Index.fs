@@ -3,41 +3,150 @@ module Index
 open Elmish
 open Fable.Remoting.Client
 open Shared
+open System
+
+type SupplierForm =
+    {
+        Name: string
+    }
+
+type WarehouseForm =
+    {
+        Name: string
+    }
+
+type ProductForm =
+    {
+        SupplierId: string
+        WarehouseId: string
+        Name: string
+    }
 
 type Model =
-    { Todos: Todo list
-      Input: string }
+    {
+        Suppliers: Supplier list
+        Warehouses: Warehouse list
+        Products: Product list
+        SupplierForm: SupplierForm
+        WarehouseForm: WarehouseForm
+        ProductForm: ProductForm
+    }
 
 type Msg =
-    | GotTodos of Todo list
-    | SetInput of string
-    | AddTodo
-    | AddedTodo of Todo
+    | GotAllSuppliers of Supplier list
+    | SetSupplierName of string
+    | RefreshSuppliers of unit
+    | AddSupplier
+    | UpdateSupplier of Guid
+    | DeleteSupplier of Guid
+    | GotAllWarehouses of Warehouse list
+    | SetWarehouseName of string
+    | RefreshWarehouses of unit
+    | AddWarehouse
+    | UpdateWarehouse of Guid
+    | DeleteWarehouse of Guid
+    | GotAllProducts of Product list
+    | SetProductName of string
+    | SetProductSupplierId of string
+    | SetProductWarehouseId of string
+    | RefreshProducts of unit
+    | AddProduct
+    | UpdateProduct of Guid
+    | DeleteProduct of Guid
 
-let todosApi =
+let supplierApi =
     Remoting.createApi()
     |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.buildProxy<ITodosApi>
+    |> Remoting.buildProxy<ISupplierApi>
+
+let warehouseApi =
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.buildProxy<IWarehouseApi>
+
+let productApi =
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.buildProxy<IProductApi>
 
 let init(): Model * Cmd<Msg> =
     let model =
-        { Todos = []
-          Input = "" }
-    let cmd = Cmd.OfAsync.perform todosApi.getTodos () GotTodos
+        {
+            Suppliers = []
+            Warehouses = []
+            Products = []
+            SupplierForm = { Name = "" }
+            WarehouseForm = { Name = "" }
+            ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }
+        }
+    let cmd = Cmd.OfAsync.perform supplierApi.getAll () GotAllSuppliers
     model, cmd
 
 let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     match msg with
-    | GotTodos todos ->
-        { model with Todos = todos }, Cmd.none
-    | SetInput value ->
-        { model with Input = value }, Cmd.none
-    | AddTodo ->
-        let todo = Todo.create model.Input
-        let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
-        { model with Input = "" }, cmd
-    | AddedTodo todo ->
-        { model with Todos = model.Todos @ [ todo ] }, Cmd.none
+    | GotAllSuppliers suppliers ->
+        let cmd = Cmd.OfAsync.perform warehouseApi.getAll () GotAllWarehouses
+        { model with Suppliers = suppliers }, cmd
+    | SetSupplierName name ->
+        { model with SupplierForm = { Name = name }}, Cmd.none
+    | RefreshSuppliers _ ->
+        let cmd = Cmd.OfAsync.perform supplierApi.getAll () GotAllSuppliers
+        model, cmd
+    | AddSupplier ->
+        let newSupplier = Supplier.create model.SupplierForm.Name
+        let cmd = Cmd.OfAsync.perform supplierApi.add newSupplier RefreshSuppliers
+        { model with SupplierForm = { Name = "" }}, cmd
+    | UpdateSupplier id ->
+        let supplier = Supplier.create model.SupplierForm.Name
+        let cmd = Cmd.OfAsync.perform supplierApi.add { supplier with Id = id } RefreshSuppliers
+        { model with SupplierForm = { Name = "" }}, cmd
+    | DeleteSupplier id ->
+        let cmd = Cmd.OfAsync.perform supplierApi.delete id RefreshSuppliers
+        model, cmd
+
+    | GotAllWarehouses warehouses ->
+        let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
+        { model with Warehouses = warehouses }, cmd
+    | SetWarehouseName name ->
+        { model with WarehouseForm = { Name = name }}, Cmd.none
+    | RefreshWarehouses _ ->
+        let cmd = Cmd.OfAsync.perform warehouseApi.getAll () GotAllWarehouses
+        model, cmd
+    | AddWarehouse ->
+        let newWarehouse = Warehouse.create model.WarehouseForm.Name
+        let cmd = Cmd.OfAsync.perform warehouseApi.add newWarehouse RefreshWarehouses
+        { model with WarehouseForm = { Name = "" }}, cmd
+    | UpdateWarehouse id ->
+        let warehouse = Warehouse.create model.WarehouseForm.Name
+        let cmd = Cmd.OfAsync.perform warehouseApi.add { warehouse with Id = id } RefreshWarehouses
+        { model with WarehouseForm = { Name = "" }}, cmd
+    | DeleteWarehouse id ->
+        let cmd = Cmd.OfAsync.perform warehouseApi.delete id RefreshWarehouses
+        model, cmd
+
+    | GotAllProducts products ->
+        { model with Products = products }, Cmd.none
+    | SetProductName name ->
+        { model with ProductForm = { model.ProductForm with Name = name }}, Cmd.none
+    | SetProductSupplierId supplierId ->
+        { model with ProductForm = { model.ProductForm with SupplierId = supplierId }}, Cmd.none
+    | SetProductWarehouseId warehouseId ->
+        { model with ProductForm = { model.ProductForm with WarehouseId = warehouseId }}, Cmd.none
+    | RefreshProducts _ ->
+           let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
+           model, cmd
+    | AddProduct ->
+        let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+        let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
+        { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
+    | UpdateProduct id ->
+        let product = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+        let cmd = Cmd.OfAsync.perform productApi.add { product with Id = id } RefreshWarehouses
+        { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
+
+    | DeleteProduct id ->
+        let cmd = Cmd.OfAsync.perform productApi.delete id RefreshProducts
+        model, cmd
 
 open Fable.React
 open Fable.React.Props
@@ -56,31 +165,33 @@ let navBrand =
         ]
     ]
 
+    // Build container
+
 let containerBox (model : Model) (dispatch : Msg -> unit) =
     Box.box' [ ] [
         Content.content [ ] [
             Content.Ol.ol [ ] [
-                for todo in model.Todos do
-                    li [ ] [ str todo.Description ]
+                for todo in model.Suppliers do
+                    li [ ] [ str todo.Name ]
             ]
         ]
-        Field.div [ Field.IsGrouped ] [
-            Control.p [ Control.IsExpanded ] [
-                Input.text [
-                  Input.Value model.Input
-                  Input.Placeholder "What needs to be done?"
-                  Input.OnChange (fun x -> SetInput x.Value |> dispatch) ]
-            ]
-            Control.p [ ] [
-                Button.a [
-                    Button.Color IsPrimary
-                    Button.Disabled (Todo.isValid model.Input |> not)
-                    Button.OnClick (fun _ -> dispatch AddTodo)
-                ] [
-                    str "Add"
-                ]
-            ]
-        ]
+        //Field.div [ Field.IsGrouped ] [
+        //    Control.p [ Control.IsExpanded ] [
+        //        Input.text [
+        //          Input.Value model.Input
+        //          Input.Placeholder "What needs to be done?"
+        //          Input.OnChange (fun x -> SetInput x.Value |> dispatch) ]
+        //    ]
+        //    Control.p [ ] [
+        //        Button.a [
+        //            Button.Color IsPrimary
+        //            Button.Disabled (Todo.isValid model.Input |> not)
+        //            Button.OnClick (fun _ -> dispatch AddTodo)
+        //        ] [
+        //            str "Add"
+        //        ]
+        //    ]
+        //]
     ]
 
 let view (model : Model) (dispatch : Msg -> unit) =

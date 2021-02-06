@@ -6,15 +6,15 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
-    <Compile Include="Db.fsx" />
+    <Compile Include="Db.fs" />
     <Compile Include="Server.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Shared\Shared.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="5.0.3" />
     <PackageReference Include="SQLProvider" Version="1.1.100" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

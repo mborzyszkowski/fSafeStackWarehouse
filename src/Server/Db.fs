@@ -1,16 +1,15 @@
 namespace Db
 
-#r @".\bin\Debug\netcoreapp3.1\FSharp.Data.SqlProvider.dll"
-#r @".\bin\Debug\netcoreapp3.1\Npgsql.dll" 
-open FSharp.Data.Sql
 open Shared
+open FSharp.Data.Sql
+open System
 
 module Db = 
 
     [<Literal>]
     let connectionString = @"Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=password;"
-
-    type Sql = SqlProvider<Common.DatabaseProviderTypes.POSTGRESQL, connectionString, UseOptionTypes=true>
+    
+    type Sql = SqlDataProvider<Common.DatabaseProviderTypes.POSTGRESQL, connectionString, UseOptionTypes=true>
     type DbContext = Sql.dataContext
     let ctx: DbContext = Sql.GetDataContext connectionString
 
@@ -31,9 +30,9 @@ module Db =
 
         let get (id: Guid): Supplier option = 
             query {
-                for supplier in suppliers do
-                    where (supplier.Id = id)
-                    select supplier
+                for s in suppliers do
+                    where (s.Id = id)
+                    select s
             }
             |> Seq.map (fun x -> x.MapTo<Supplier>)
             |> Seq.tryHead
@@ -46,9 +45,9 @@ module Db =
 
         let update (supplier: Supplier) =
             query {
-                for supplier in suppliers do
-                    where (supplier.Id = id)
-                    select supplier
+                for s in suppliers do
+                    where (s.Id = supplier.Id)
+                    select s
             }
             |> Seq.iter (fun sup -> 
                 sup.Name <- supplier.Name
@@ -57,9 +56,9 @@ module Db =
 
         let delete (id: Guid) =
             query {
-                for supplier in suppliers do
-                    where (supplier.Id = id)
-                    select supplier
+                for s in suppliers do
+                    where (s.Id = id)
+                    select s
             }
             |> Seq.iter (fun sup -> sup.Delete())
             ctx.SubmitUpdates()
@@ -82,9 +81,9 @@ module Db =
 
         let get (id: Guid): Warehouse option = 
             query {
-                for warehouse in warehouses do
-                    where (warehouse.Id = id)
-                    select warehouse
+                for w in warehouses do
+                    where (w.Id = id)
+                    select w
             }
             |> Seq.map (fun x -> x.MapTo<Warehouse>)
             |> Seq.tryHead
@@ -97,9 +96,9 @@ module Db =
 
         let update (warehouse: Warehouse) =
             query {
-                for warehouse in warehouses do
-                    where (warehouse.Id = id)
-                    select warehouse
+                for w in warehouses do
+                    where (w.Id = warehouse.Id)
+                    select w
             }
             |> Seq.iter (fun wh -> 
                 wh.Name <- warehouse.Name
@@ -108,9 +107,9 @@ module Db =
             
         let delete (id: Guid) =
             query {
-                for warehouse in warehouses do
-                    where (warehouse.Id = id)
-                    select warehouse
+                for w in warehouses do
+                    where (w.Id = id)
+                    select w
             }
             |> Seq.iter (fun wh -> wh.Delete())
             ctx.SubmitUpdates()
@@ -134,9 +133,9 @@ module Db =
 
         let get (id: Guid): Product option = 
             query {
-                for product in products do
-                    where (product.Id = id)
-                    select product
+                for p in products do
+                    where (p.Id = id)
+                    select p
             }
             |> Seq.map (fun x -> x.MapTo<Product>)
             |> Seq.tryHead
@@ -151,9 +150,9 @@ module Db =
 
         let update (product: Product) =
             query {
-                for product in products do
-                    where (product.Id = id)
-                    select product
+                for p in products do
+                    where (p.Id = product.Id)
+                    select p
             }
             |> Seq.iter (fun p -> 
                 p.Name <- product.Name
@@ -164,9 +163,9 @@ module Db =
             
         let delete (id: Guid) =
             query {
-                for product in products do
-                    where (product.Id = id)
-                    select product
+                for p in products do
+                    where (p.Id = id)
+                    select p
             }
             |> Seq.iter (fun p -> p.Delete())
             ctx.SubmitUpdates()
