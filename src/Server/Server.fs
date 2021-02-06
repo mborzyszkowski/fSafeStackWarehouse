@@ -2,9 +2,11 @@ module Server
 
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
+open Giraffe
 open Saturn
-
+open System
 open Shared
+open Db
 
 type Storage () =
     let todos = ResizeArray<_>()
@@ -38,6 +40,56 @@ let webApp =
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.fromValue todosApi
     |> Remoting.buildHttpHandler
+
+let supplierApi : ISupplierApi = 
+    {
+        getAll = fun () -> async { return Db.Suppliers.getAll }
+        get = fun id -> async { return Db.Suppliers.get id }
+        add = fun supplier -> async { return Db.Suppliers.add supplier }
+        update = fun supplier -> async { return Db.Suppliers.update supplier }
+        delete = fun id -> async { return Db.Suppliers.delete id }
+    }
+
+let warehouseApi : IWarehouseApi = 
+    {
+        getAll = fun () -> async { return Db.Warehouses.getAll }
+        get = fun id -> async { return Db.Warehouses.get id }
+        add = fun warehouse -> async { return Db.Warehouses.add warehouse }
+        update = fun warehouse -> async { return Db.Warehouses.update warehouse }
+        delete = fun id -> async { return Db.Warehouses.delete id }
+    }
+
+let productApi : IProductApi = 
+    {
+        getAll = fun () -> async { return Db.Warehouses.getAll }
+        get = fun id -> async { return Db.Warehouses.get id }
+        add = fun product -> async { return Db.Warehouses.add product }
+        update = fun product -> async { return Db.Warehouses.update product }
+        delete = fun id -> async { return Db.Warehouses.delete id }
+    }
+
+let supplierApp = 
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.fromValue supplierApi
+    |> Remoting.buildHttpHandler
+
+let warehouseApp = 
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.fromValue warehouseApi
+    |> Remoting.buildHttpHandler
+
+let productApp = 
+    Remoting.createApi()
+    |> Remoting.withRouteBuilder Route.builder
+    |> Remoting.fromValue productApi
+    |> Remoting.buildHttpHandler
+
+// let webApp = choose [
+//     supplierApp
+//     warehouseApp
+//     productApp]
 
 let app =
     application {
