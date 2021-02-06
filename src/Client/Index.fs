@@ -79,7 +79,6 @@ let init(): Model * Cmd<Msg> =
             WarehouseForm = { Name = "" }
             ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }
         }
-    
     let cmd = Cmd.OfAsync.perform supplierApi.getAll () GotAllSuppliers
     model, cmd
 
@@ -87,7 +86,8 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     match msg with
     | GotAllSuppliers suppliers ->
         let cmd = Cmd.OfAsync.perform warehouseApi.getAll () GotAllWarehouses
-        { model with Suppliers = suppliers }, cmd
+        let firstSupplierId = if suppliers.IsEmpty then "" else suppliers.Head.Id.ToString()
+        { model with Suppliers = suppliers; ProductForm = { model.ProductForm with SupplierId = firstSupplierId}}, cmd
     | SetSupplierName name ->
         { model with SupplierForm = { Name = name }}, Cmd.none
     | RefreshSuppliers _ ->
@@ -107,7 +107,8 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
 
     | GotAllWarehouses warehouses ->
         let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
-        { model with Warehouses = warehouses }, cmd
+        let firstWarehouseId = if warehouses.IsEmpty then "" else warehouses.Head.Id.ToString()
+        { model with Warehouses = warehouses; ProductForm = { model.ProductForm with WarehouseId = firstWarehouseId} }, cmd
     | SetWarehouseName name ->
         { model with WarehouseForm = { Name = name }}, Cmd.none
     | RefreshWarehouses _ ->
@@ -137,7 +138,6 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
            let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
            model, cmd
     | AddProduct ->
-        printf "%s" model.ProductForm.SupplierId
         let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
         let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
         { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
