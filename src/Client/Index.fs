@@ -79,6 +79,7 @@ let init(): Model * Cmd<Msg> =
             WarehouseForm = { Name = "" }
             ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }
         }
+    
     let cmd = Cmd.OfAsync.perform supplierApi.getAll () GotAllSuppliers
     model, cmd
 
@@ -136,6 +137,7 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
            let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
            model, cmd
     | AddProduct ->
+        printf "%s" model.ProductForm.SupplierId
         let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
         let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
         { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
@@ -146,6 +148,16 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     | DeleteProduct id ->
         let cmd = Cmd.OfAsync.perform productApi.delete id RefreshProducts
         model, cmd
+        
+let anyReferencedProductsToSupplier (products: Product list) (supplierId: Guid) =
+    products
+    |> List.map (fun p -> p.SupplierId)
+    |> List.contains(supplierId)
+
+let anyReferencedProductsToWarehouse (products: Product list) (warehouseId: Guid) =
+   products
+   |> List.map (fun p -> p.WarehouseId)
+   |> List.contains(warehouseId)
 
 open Fable.React
 open Fable.React.Props
@@ -164,12 +176,16 @@ let navBrand =
         ]
     ]
 
-    // Build container
-
 let containerBox (model : Model) (dispatch : Msg -> unit) =
     Box.box' [ ] [
         Content.content [ ] [
-            Control.p [ ] [ str "Suppliers"]
+            Control.p [
+                Control.Props [
+                    Style [
+                        FontWeight "bold"
+                    ]
+                ]
+            ] [ str "Suppliers"]
             Content.Ol.ol [ ] [
                 for supplier in model.Suppliers do
                     li [ ] [
@@ -185,6 +201,7 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                             ]
                             Button.a [
                                 Button.Color IsPrimary
+                                Button.Disabled (anyReferencedProductsToSupplier model.Products supplier.Id)
                                 Button.OnClick (fun _ -> dispatch (DeleteSupplier supplier.Id))
                                 Button.Props [
                                     Style [
@@ -214,26 +231,33 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                     ]
                 ]
             ]
-            Control.p [ ] [ str "Warehouses"]
+            Control.p [
+                Control.Props [
+                    Style [
+                        FontWeight "bold"
+                    ]
+                ]
+            ] [ str "Warehouses"]
             Content.Ol.ol [ ] [
-                for warehouese in model.Warehouses do
+                for warehouse in model.Warehouses do
                     li [ ] [
                         Field.div [ Field.IsGrouped ] [ 
-                            Control.p [ ] [ str warehouese.Name ]
-                            Control.p [ ] [ str (warehouese.Id.ToString()) ] 
+                            Control.p [ ] [ str warehouse.Name ]
+                            Control.p [ ] [ str (warehouse.Id.ToString()) ] 
                             Button.a [
                                 Button.Color IsPrimary
                                 Button.Disabled (Supplier.isValid model.WarehouseForm.Name |> not)
-                                Button.OnClick (fun _ -> dispatch (UpdateWarehouse warehouese.Id))
+                                Button.OnClick (fun _ -> dispatch (UpdateWarehouse warehouse.Id))
                             ] [
                                 str "Update"
                             ]
                             Button.a [
                                 Button.Color IsPrimary
-                                Button.OnClick (fun _ -> dispatch (DeleteWarehouse warehouese.Id))
+                                Button.Disabled (anyReferencedProductsToWarehouse model.Products warehouse.Id)
+                                Button.OnClick (fun _ -> dispatch (DeleteWarehouse warehouse.Id))
                                 Button.Props [
                                     Style [
-                                        MarginLeft """10px"""
+                                        MarginLeft "10px"
                                     ]
                                 ]
                             ] [
@@ -255,7 +279,93 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                         Button.Disabled (Warehouse.isValid model.WarehouseForm.Name |> not)
                         Button.OnClick (fun _ -> dispatch AddWarehouse)
                     ] [
-                        str "Add Supplier"
+                        str "Add Warehouse"
+                    ]
+                ]
+            ]
+            Control.p [ 
+                Control.Props [
+                    Style [
+                        FontWeight "bold"
+                    ]
+                ]
+            ] [ str "Products"]
+            Content.Ol.ol [ ] [
+                for product in model.Products do
+                    li [ ] [
+                        Field.div [ Field.IsGrouped ] [
+                            Field.div [] [
+                                Control.p [ ] [ str product.Name ]
+                                Control.p [ ] [ str ("id: " + product.Id.ToString()) ] 
+                                Control.p [ ] [ str ("supplierId: " + product.SupplierId.ToString()) ] 
+                                Control.p [ ] [ str ("warehouseId: " + product.WarehouseId.ToString()) ]
+                            ]
+                            Field.div [
+                                Field.IsGrouped
+                                Field.Props [
+                                    Style [
+                                        Display DisplayOptions.Flex
+                                        JustifyContent JustifySelfOptions.Center
+                                        AlignItems AlignItemsOptions.Center
+                                    ]
+                                ]
+                            ] [
+                                Button.a [
+                                    Button.Color IsPrimary
+                                    Button.Disabled (Supplier.isValid model.WarehouseForm.Name |> not)
+                                    Button.OnClick (fun _ -> dispatch (UpdateProduct product.Id))
+                                ] [
+                                    str "Update"
+                                ]
+                                Button.a [
+                                    Button.Color IsPrimary
+                                    Button.OnClick (fun _ -> dispatch (DeleteProduct product.Id))
+                                    Button.Props [
+                                        Style [
+                                            MarginLeft "10px"
+                                        ]
+                                    ]
+                                ] [
+                                    str "Remove"
+                                ]
+                            ]
+                        ]
+                    ]
+            ]
+            Field.div [ Field.IsGrouped ] [
+                Control.p [ Control.IsExpanded ] [
+                    Input.text [
+                      Input.Value model.ProductForm.Name
+                      Input.Placeholder "Product name"
+                      Input.OnChange (fun x -> SetProductName x.Value |> dispatch) ]
+                ]
+                Control.p [ Control.IsExpanded ] [
+                    select [
+                        Value model.ProductForm.SupplierId
+                        Placeholder "SupplierId"
+                        OnChange (fun x -> SetProductSupplierId x.Value |> dispatch) ] 
+                        [ 
+                            for s in model.Suppliers do
+                                option [ Value (s.Id.ToString()) ] [ str (s.Name) ]
+                        ]
+                ]
+                Control.p [ Control.IsExpanded ] [
+                    select [
+                        Value model.ProductForm.WarehouseId
+                        Placeholder "WarehouseId"
+                        OnChange (fun x -> SetProductWarehouseId x.Value |> dispatch) ] 
+                        [ 
+                            for s in model.Warehouses do
+                                option [ Value (s.Id.ToString()) ] [ str (s.Name) ]
+                        ]
+                ]
+                Control.p [ ] [
+                    Button.a [
+                        Button.Color IsPrimary
+                        Button.Disabled ((Warehouse.isValid model.ProductForm.Name) |> not)
+                        Button.OnClick (fun _ -> dispatch AddProduct)
+                    ] [
+                        str "Add Product"
                     ]
                 ]
             ]
@@ -286,7 +396,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                     Column.Width (Screen.All, Column.Is6)
                     Column.Offset (Screen.All, Column.Is3)
                 ] [
-                    Heading.p [ Heading.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ] [ str "Inventory of the company's products" ]
+                    Heading.p [ Heading.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ] [ str "Inventory products" ]
                     containerBox model dispatch
                 ]
             ]
