@@ -139,12 +139,16 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
            model, cmd
     | AddProduct ->
         let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+        let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
+        let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
         let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
-        { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
+        { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
     | UpdateProduct id ->
         let product = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+        let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
+        let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
         let cmd = Cmd.OfAsync.perform productApi.update { product with Id = id } RefreshWarehouses
-        { model with ProductForm = { Name = ""; SupplierId = ""; WarehouseId = "" }}, cmd
+        { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
     | DeleteProduct id ->
         let cmd = Cmd.OfAsync.perform productApi.delete id RefreshProducts
         model, cmd

@@ -6,7 +6,7 @@ open Saturn
 open Shared
 open Giraffe
 open System
-//open Db
+open Db
 
 
 // DB Mocks - storages
@@ -114,32 +114,32 @@ let productApiMock : IProductApi =
 // Real Apis
 
 
-//let supplierApi : ISupplierApi = 
-//    {
-//        getAll = fun () -> async { return Db.Suppliers.getAll () }
-//        get = fun id -> async { return Db.Suppliers.get id }
-//        add = fun supplier -> async { return Db.Suppliers.add supplier }
-//        update = fun supplier -> async { return Db.Suppliers.update supplier }
-//        delete = fun id -> async { return Db.Suppliers.delete id }
-//    }
+let supplierApi : ISupplierApi = 
+    {
+        getAll = fun () -> async { return Db.Suppliers.getAll () }
+        get = fun id -> async { return Db.Suppliers.get id }
+        add = fun supplier -> async { return Db.Suppliers.add supplier }
+        update = fun supplier -> async { return Db.Suppliers.update supplier }
+        delete = fun id -> async { return Db.Suppliers.delete id }
+    }
 
-//let warehouseApi : IWarehouseApi = 
-//    {
-//        getAll = fun () -> async { return Db.Warehouses.getAll ()}
-//        get = fun id -> async { return Db.Warehouses.get id }
-//        add = fun warehouse -> async { return Db.Warehouses.add warehouse }
-//        update = fun warehouse -> async { return Db.Warehouses.update warehouse }
-//        delete = fun id -> async { return Db.Warehouses.delete id }
-//    }
+let warehouseApi : IWarehouseApi = 
+    {
+        getAll = fun () -> async { return Db.Warehouses.getAll ()}
+        get = fun id -> async { return Db.Warehouses.get id }
+        add = fun warehouse -> async { return Db.Warehouses.add warehouse }
+        update = fun warehouse -> async { return Db.Warehouses.update warehouse }
+        delete = fun id -> async { return Db.Warehouses.delete id }
+    }
 
-//let productApi : IProductApi = 
-//    {
-//        getAll = fun () -> async { return Db.Products.getAll ()}
-//        get = fun id -> async { return Db.Products.get id }
-//        add = fun product -> async { return Db.Products.add product }
-//        update = fun product -> async { return Db.Products.update product }
-//        delete = fun id -> async { return Db.Products.delete id }
-//    }
+let productApi : IProductApi = 
+    {
+        getAll = fun () -> async { return Db.Products.getAll ()}
+        get = fun id -> async { return Db.Products.get id }
+        add = fun product -> async { return Db.Products.add product }
+        update = fun product -> async { return Db.Products.update product }
+        delete = fun id -> async { return Db.Products.delete id }
+    }
 
 let createApp api =
     Remoting.createApi()
@@ -148,14 +148,14 @@ let createApp api =
     |> Remoting.buildHttpHandler
 
 // Real DB
-//let supplierApp = createApp supplierApi
-//let warehouseApp = createApp warehouseApi
-//let productApp = createApp productApi
+let supplierApp = createApp supplierApi
+let warehouseApp = createApp warehouseApi
+let productApp = createApp productApi
 
 // DB mock - storages
-let supplierApp = createApp supplierApiMock
-let warehouseApp = createApp warehouseApiMock
-let productApp = createApp productApiMock
+//let supplierApp = createApp supplierApiMock
+//let warehouseApp = createApp warehouseApiMock
+//let productApp = createApp productApiMock
 
 
 let webApp = choose [
