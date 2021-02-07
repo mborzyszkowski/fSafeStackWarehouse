@@ -69,6 +69,16 @@ let productApi =
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<IProductApi>
 
+let anyReferencedProductsToSupplier (products: Product list) (supplierId: Guid) =
+    products
+    |> List.map (fun p -> p.SupplierId)
+    |> List.contains(supplierId)
+
+let anyReferencedProductsToWarehouse (products: Product list) (warehouseId: Guid) =
+   products
+   |> List.map (fun p -> p.WarehouseId)
+   |> List.contains(warehouseId)
+
 let init(): Model * Cmd<Msg> =
     let model =
         {
@@ -94,16 +104,25 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
         let cmd = Cmd.OfAsync.perform supplierApi.getAll () GotAllSuppliers
         model, cmd
     | AddSupplier ->
-        let newSupplier = Supplier.create model.SupplierForm.Name
-        let cmd = Cmd.OfAsync.perform supplierApi.add newSupplier RefreshSuppliers
-        { model with SupplierForm = { Name = "" }}, cmd
+        if (Supplier.isValid model.SupplierForm.Name |> not) then
+            model, Cmd.none
+        else
+            let newSupplier = Supplier.create model.SupplierForm.Name
+            let cmd = Cmd.OfAsync.perform supplierApi.add newSupplier RefreshSuppliers
+            { model with SupplierForm = { Name = "" }}, cmd
     | UpdateSupplier id ->
-        let supplier = Supplier.create model.SupplierForm.Name
-        let cmd = Cmd.OfAsync.perform supplierApi.update { supplier with Id = id } RefreshSuppliers
-        { model with SupplierForm = { Name = "" }}, cmd
+        if (Supplier.isValid model.SupplierForm.Name |> not) then
+            model, Cmd.none
+        else
+            let supplier = Supplier.create model.SupplierForm.Name
+            let cmd = Cmd.OfAsync.perform supplierApi.update { supplier with Id = id } RefreshSuppliers
+            { model with SupplierForm = { Name = "" }}, cmd
     | DeleteSupplier id ->
-        let cmd = Cmd.OfAsync.perform supplierApi.delete id RefreshSuppliers
-        model, cmd
+        if (anyReferencedProductsToSupplier model.Products id) then
+            model, Cmd.none
+        else
+            let cmd = Cmd.OfAsync.perform supplierApi.delete id RefreshSuppliers
+            model, cmd
 
     | GotAllWarehouses warehouses ->
         let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
@@ -115,16 +134,25 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
         let cmd = Cmd.OfAsync.perform warehouseApi.getAll () GotAllWarehouses
         model, cmd
     | AddWarehouse ->
-        let newWarehouse = Warehouse.create model.WarehouseForm.Name
-        let cmd = Cmd.OfAsync.perform warehouseApi.add newWarehouse RefreshWarehouses
-        { model with WarehouseForm = { Name = "" }}, cmd
+        if (Supplier.isValid model.WarehouseForm.Name |> not) then
+            model, Cmd.none
+        else
+            let newWarehouse = Warehouse.create model.WarehouseForm.Name
+            let cmd = Cmd.OfAsync.perform warehouseApi.add newWarehouse RefreshWarehouses
+            { model with WarehouseForm = { Name = "" }}, cmd
     | UpdateWarehouse id ->
-        let warehouse = Warehouse.create model.WarehouseForm.Name
-        let cmd = Cmd.OfAsync.perform warehouseApi.update { warehouse with Id = id } RefreshWarehouses
-        { model with WarehouseForm = { Name = "" }}, cmd
+        if (Supplier.isValid model.WarehouseForm.Name |> not) then
+            model, Cmd.none
+        else
+            let warehouse = Warehouse.create model.WarehouseForm.Name
+            let cmd = Cmd.OfAsync.perform warehouseApi.update { warehouse with Id = id } RefreshWarehouses
+            { model with WarehouseForm = { Name = "" }}, cmd
     | DeleteWarehouse id ->
-        let cmd = Cmd.OfAsync.perform warehouseApi.delete id RefreshWarehouses
-        model, cmd
+        if (anyReferencedProductsToWarehouse model.Products id) then
+            model, Cmd.none
+        else
+            let cmd = Cmd.OfAsync.perform warehouseApi.delete id RefreshWarehouses
+            model, cmd
 
     | GotAllProducts products ->
         { model with Products = products }, Cmd.none
@@ -138,30 +166,26 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
            let cmd = Cmd.OfAsync.perform productApi.getAll () GotAllProducts
            model, cmd
     | AddProduct ->
-        let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
-        let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
-        let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
-        let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
-        { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
+        if (Product.isValid model.ProductForm.Name) |> not then
+            model, Cmd.none
+        else
+            let newProduct = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+            let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
+            let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
+            let cmd = Cmd.OfAsync.perform productApi.add newProduct RefreshProducts
+            { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
     | UpdateProduct id ->
-        let product = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
-        let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
-        let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
-        let cmd = Cmd.OfAsync.perform productApi.update { product with Id = id } RefreshWarehouses
-        { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
+        if (Product.isValid model.ProductForm.Name) |> not then
+            model, Cmd.none
+        else
+            let product = Product.create model.ProductForm.Name (Guid.Parse model.ProductForm.SupplierId) (Guid.Parse model.ProductForm.WarehouseId)
+            let firstSupplierId = if model.Suppliers.IsEmpty then "" else model.Suppliers.Head.Id.ToString()
+            let firstWarehouseId = if model.Warehouses.IsEmpty then "" else model.Warehouses.Head.Id.ToString()
+            let cmd = Cmd.OfAsync.perform productApi.update { product with Id = id } RefreshWarehouses
+            { model with ProductForm = { Name = ""; SupplierId = firstSupplierId; WarehouseId = firstWarehouseId }}, cmd
     | DeleteProduct id ->
         let cmd = Cmd.OfAsync.perform productApi.delete id RefreshProducts
         model, cmd
-        
-let anyReferencedProductsToSupplier (products: Product list) (supplierId: Guid) =
-    products
-    |> List.map (fun p -> p.SupplierId)
-    |> List.contains(supplierId)
-
-let anyReferencedProductsToWarehouse (products: Product list) (warehouseId: Guid) =
-   products
-   |> List.map (fun p -> p.WarehouseId)
-   |> List.contains(warehouseId)
 
 open Fable.React
 open Fable.React.Props
@@ -250,7 +274,7 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                             Control.p [ ] [ str (warehouse.Id.ToString()) ] 
                             Button.a [
                                 Button.Color IsPrimary
-                                Button.Disabled (Supplier.isValid model.WarehouseForm.Name |> not)
+                                Button.Disabled (Warehouse.isValid model.WarehouseForm.Name |> not)
                                 Button.OnClick (fun _ -> dispatch (UpdateWarehouse warehouse.Id))
                             ] [
                                 str "Update"
@@ -316,7 +340,7 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                             ] [
                                 Button.a [
                                     Button.Color IsPrimary
-                                    Button.Disabled (Supplier.isValid model.WarehouseForm.Name |> not)
+                                    Button.Disabled (Supplier.isValid model.ProductForm.Name |> not)
                                     Button.OnClick (fun _ -> dispatch (UpdateProduct product.Id))
                                 ] [
                                     str "Update"
@@ -366,7 +390,7 @@ let containerBox (model : Model) (dispatch : Msg -> unit) =
                 Control.p [ ] [
                     Button.a [
                         Button.Color IsPrimary
-                        Button.Disabled ((Warehouse.isValid model.ProductForm.Name) |> not)
+                        Button.Disabled ((Product.isValid model.ProductForm.Name) |> not)
                         Button.OnClick (fun _ -> dispatch AddProduct)
                     ] [
                         str "Add Product"
